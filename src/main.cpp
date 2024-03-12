@@ -41,7 +41,9 @@ float command_steer = 0.0;
 float command_speed = 0.0;
 
 // ステア角フィードバック
-float steer_angle = 0.0;
+float steer_angle = 0.0;     // deg 角度
+float steer_pre_angle = 0.0; // deg前周期のステア角
+float steer_angle_ref = 0.0; // deg 目標値
 float steer_gainP = 0.0;
 float steer_gainI = 0.0;
 float steer_gainD = 0.0;
@@ -73,22 +75,25 @@ void setup()
 
 void loop()
 {
-  if (PS4.isConnected()){
+  /*PS4コントローラー*/
+  if (PS4.isConnected())
+  {
     command_X = (float)PS4.LStickX() * 1.f;
     command_Y = (float)PS4.LStickY() * 1.f;
     // ステア角指令値
-    command_steer = atan2(command_Y, command_X);
+    command_steer = (float)atan2(command_Y, command_X);
     // スピード指令値
     command_speed = sqrt(command_Y * command_Y + command_X * command_X);
   }
-
+  /*ステアエンコーダー*/
   Wire.beginTransmission(0x36);
   Wire.write(0x0C);
   Wire.endTransmission(false);
 
   Wire.requestFrom(0x36, 2);
 
-  while (Wire.available()){
+  while (Wire.available())
+  {
     byte angle_h = Wire.read();
     byte angle_l = Wire.read();
     unsigned int angle = (0x0F & angle_h) << 8 | angle_l;
@@ -105,44 +110,71 @@ void loop()
 
   Wire.requestFrom(0x36, 1);
 
-  while (Wire.available()){
+  while (Wire.available())
+  {
     byte state = Wire.read();
 
     Serial.println(state, BIN);
   }
 
   /* ステア角フィードバック*/
-  err_steer = steer_angle - command_steer;
+  steer_angle_ref = command_steer - steer_angle; // ステア角度目標値
+  err_steer = steer_pre_angle - steer_angle_ref;
   steer_calcP = err_steer;
   steer_calcI = steer_calcI + (err_steer + pre_err_steer) * ((float)control_period * 1.0E-6f) * 0.5;
   steer_calcD = (err_steer - pre_err_steer) * control_freq;
   steer_calcPID = steer_gainP * steer_calcP + steer_gainI * steer_calcI + steer_gainD * steer_calcD;
-  pre_err_steer = err_steer;
-  //モーターの出力に変換
-  if(err_steer>=5.0){
-    command_speed=0.0;
-  }
-  top_motor_duty_out=command_speed*0.25+command_steer;
-  bottom_motor_duty_out=command_speed*0.25-command_steer;
 
-  if(top_motor_duty_out>255){top_motor_duty_out=200;}
-  if(top_motor_duty_out<-255){top_motor_duty_out=-200;}
-  if(bottom_motor_duty_out>255){bottom_motor_duty_out=200;}
-  if(bottom_motor_duty_out<-255){bottom_motor_duty_out=-200;}
-  if(top_motor_duty_out>=0.0){
-    ledcWrite(ch_top1,abs(top_motor_duty_out));
-    ledcWrite(ch_top2,0);
-  }else{
-    ledcWrite(ch_top1,0.0);
-    ledcWrite(ch_top2,abs(top_motor_duty_out));
+  pre_err_steer = err_steer;
+  steer_pre_angle = steer_angle;
+
+  // モーターの出力に変換
+  if (err_steer >= 5.0)
+  {
+    command_speed = 0.0;
   }
-  if(bottom_motor_duty_out>=0.0){
-    ledcWrite(ch_bottom1,abs(bottom_motor_duty_out));
-    ledcWrite(ch_bottom2,0.0);
-  }else{
-    ledcWrite(ch_bottom1,0);
-    ledcWrite(ch_bottom2,abs(bottom_motor_duty_out));
+  top_motor_duty_out = command_speed * 0.25 + steer_calcPID;
+  bottom_motor_duty_out = command_speed * 0.25 - steer_calcPID;
+
+  if (top_motor_duty_out > 255)
+  {
+    top_motor_duty_out = 200;
   }
+  if (top_motor_duty_out < -255)
+  {
+    top_motor_duty_out = -200;
+  }
+  if (bottom_motor_duty_out > 255)
+  {
+    bottom_motor_duty_out = 200;
+  }
+  if (bottom_motor_duty_out < -255)
+  {
+    bottom_motor_duty_out = -200;
+  }
+  if (top_motor_duty_out >= 0.0)
+  {
+    ledcWrite(ch_top1, abs(top_motor_duty_out));
+    ledcWrite(ch_top2, 0);
+  }
+  else
+  {
+    ledcWrite(ch_top1, 0.0);
+    ledcWrite(ch_top2, abs(top_motor_duty_out));
+  }
+  if (bottom_motor_duty_out >= 0.0)
+  {
+    ledcWrite(ch_bottom1, abs(bottom_motor_duty_out));
+    ledcWrite(ch_bottom2, 0.0);
+  }
+  else
+  {
+    ledcWrite(ch_bottom1, 0);
+    ledcWrite(ch_bottom2, abs(bottom_motor_duty_out));
+  }
+
+  steer_pre_angle = steer_angle;
+
   /*制御周期安定化*/
   control_count++;
   interval = micros() - preinterval;
