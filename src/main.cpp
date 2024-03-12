@@ -6,19 +6,23 @@
 #include <esp_bt_defs.h>
 #include <esp_bt_main.h>
 
-// put function declarations here:
-int myFunction(int, int);
+const int control_period = 1000; // us
+const float control_freq = 1.0f / float(control_period); //Hz
+int control_count=0;
+int interval=0;
+int preinterval=0;
 
-void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+
+void setup()
+{
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+void loop()
+{
+  control_count++;
+  interval=micros()-preinterval;
+  while(interval<control_period){
+    interval=micros()-preinterval;
+  }
+  preinterval=micros();
 }
