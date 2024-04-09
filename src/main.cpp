@@ -15,7 +15,7 @@ int interval = 0;
 int preinterval = 0;
 
 // フィードバックゲイン
-float steer_gainP = 160.0;
+float steer_gainP = 180.0;
 float steer_gainI = 0.0;
 float steer_gainD = 0.0;
 
@@ -73,6 +73,8 @@ float steer_calcP = 0.0;
 float steer_calcI = 0.0;
 float steer_calcD = 0.0;
 float steer_calcPID = 0.0;
+
+bool flg_duty_minus = 0;
 // スピードフィードバック
 
 // モーターデューティ
@@ -206,12 +208,33 @@ void loop()
   }
   if (steer_angle_ref >= M_PI)
   {
-    steer_angle_ref = -steer_angle - (2 * M_PI - command_steer);
+    // steer_angle_ref = -steer_angle - (2 * M_PI - command_steer);
+    steer_angle_ref = -1.0 * steer_angle - (2 * M_PI - command_steer);
   }
+  // 車輪を逆転したほうがステア角が小さくなるかを判定,目標値を修正
+  if (steer_angle_ref > M_PI_2)
+  {
+    steer_angle_ref = -M_PI + steer_angle_ref;
+    flg_duty_minus = 1;
+  }
+  else
+  {
+    flg_duty_minus = 0;
+  }
+  if (steer_angle_ref < -1.0 * M_PI_2)
+  {
+    steer_angle_ref = M_PI + steer_angle_ref;
+    flg_duty_minus = 1;
+  }
+  else
+  {
+    flg_duty_minus = 0;
+  }
+
   err_steer = steer_angle_ref;
 
   // ゲイン調整
-  //steer_gainP = 110.0f + (float)(analogRead(pot1) - 2048) * 0.00024414f * 100.0f;
+  // steer_gainP = 110.0f + (float)(analogRead(pot1) - 2048) * 0.00024414f * 100.0f;
   // steer_gainI = 0.0f + (float)(analogRead(pot2) - 2048) * 0.00024414f * 0.0f;
   // steer_gainD = 0.0f + (float)(analogRead(pot3) - 2048) * 0.00024414f * 0.0f;
 
@@ -237,6 +260,12 @@ void loop()
   if (err_steer >= 0.0628 * 20.0)
   {
     command_speed = 0.0;
+  }
+
+  // マイナスフラグに応じて速度指令値を修正
+  if (flg_duty_minus == 1)
+  {
+    command_speed *= -1;
   }
   top_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 + steer_calcPID;
   bottom_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 - steer_calcPID;
