@@ -217,19 +217,19 @@ void loop()
     steer_angle_ref = -M_PI + steer_angle_ref;
     flg_duty_minus = 1;
   }
-  else
-  {
-    flg_duty_minus = 0;
-  }
+  // else
+  // {
+  //   flg_duty_minus = 0;
+  // }
   if (steer_angle_ref < -1.0 * M_PI_2)
   {
     steer_angle_ref = M_PI + steer_angle_ref;
     flg_duty_minus = 1;
   }
-  else
-  {
-    flg_duty_minus = 0;
-  }
+  // else
+  // {
+  //   flg_duty_minus = 0;
+  // }
 
   err_steer = steer_angle_ref;
 
@@ -266,6 +266,7 @@ void loop()
   if (flg_duty_minus == 1)
   {
     command_speed *= -1;
+    flg_duty_minus = 0;
   }
   top_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 + steer_calcPID;
   bottom_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 - steer_calcPID;
@@ -276,7 +277,7 @@ void loop()
     //  Serial.printf("%f,%f\r\n", top_motor_duty_out, bottom_motor_duty_out); // デューティ
     //  Serial.printf("%f\r\n", err_steer); // 偏差
     //  Serial.printf("%f,%f\r\n", command_X, command_Y); // 指令値ベクトル
-    // Serial.printf("%f,%f\r\n", command_steer, command_speed); // ステア指令値と速度指令値
+    Serial.printf("%f,%f\r\n", command_steer*57.29577951, command_speed); // ステア指令値と速度指令値
     //  Serial.println(steer_angle); // ステア角
   }
 
