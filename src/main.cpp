@@ -106,13 +106,13 @@ void setup()
   pinMode(pot3, INPUT);
 
   // 状態表示LED
-  ledcAttachPin(statusLED1, ch_led1);
-  ledcSetup(ch_led1, ledcfreq, ledcResolution);
-  ledcAttachPin(statusLED2, ch_led2);
-  ledcSetup(ch_led2, ledcfreq, ledcResolution);
+  // ledcAttachPin(statusLED1, ch_led1);
+  // ledcSetup(ch_led1, ledcfreq, ledcResolution);
+  // ledcAttachPin(statusLED2, ch_led2);
+  // ledcSetup(ch_led2, ledcfreq, ledcResolution);
 
   // スイッチ
-  pinMode(sw_pin, INPUT);
+  //pinMode(sw_pin, INPUT);
 }
 
 void loop()
@@ -139,9 +139,8 @@ void loop()
       command_Y = 0;
     }
 
-    // ステア角指令値
+    // ステア角指令値,0~360度に変換
     command_steer = (float)atan2(command_Y, command_X);
-    // 0~360度に変換
     if (command_Y < 0)
     {
       command_steer += 2 * M_PI;
@@ -154,11 +153,10 @@ void loop()
       command_speed = 1.0;
     }
     // LED消灯
-    ledcWrite(ch_led1, 0);
+    // ledcWrite(ch_led1, 0);
   }
   else
   {
-    // LED点灯
     // ledcWrite(ch_led1, 255);
     // 指令値を0に
     command_steer = 0.0f;
@@ -178,28 +176,10 @@ void loop()
     byte angle_l = Wire.read();
     unsigned int angle = (0x0F & angle_h) << 8 | angle_l;
     steer_angle = (float)angle * 2 * M_PI / 4096.f;
-    // Serial.println(steer_angle);
-    //  Serial.print(angle,HEX);
-    //  Serial.print(" ");
   }
-  // delay(1);
-
-  // Wire.beginTransmission(0x36);
-  // Wire.write(0x0B);
-  // Wire.endTransmission(false);
-
-  // Wire.requestFrom(0x36, 1);
-
-  // while (Wire.available())
-  // {
-  //   byte state = Wire.read();
-
-  //   Serial.println(state, BIN);
-  // }
 
   /* ステア角フィードバック */
-  // 目標値生成
-  //  command_steer = 1.0;
+  // ステア角度目標値生成
   steer_angle_ref = command_steer - steer_angle;
   // ステア角の最適化
   if (steer_angle_ref < -1.0 * M_PI)
@@ -208,28 +188,19 @@ void loop()
   }
   if (steer_angle_ref > M_PI)
   {
-    // steer_angle_ref = -steer_angle - (2.0 * M_PI - command_steer);
     steer_angle_ref = -1.0 * steer_angle - (2.0 * M_PI - command_steer);
   }
-  // 車輪を逆転したほうがステア角が小さくなるかを判定,目標値を修正
+  // 車輪を逆転したほうがステア角が小さくなるかを判定する。フラグを立てて,目標値を修正
   if (steer_angle_ref > M_PI_2)
   {
     steer_angle_ref = -M_PI + steer_angle_ref;
     flg_duty_minus = 1;
   }
-  // else
-  // {
-  //   flg_duty_minus = 0;
-  // }
   if (steer_angle_ref < -1.0 * M_PI_2)
   {
     steer_angle_ref = M_PI + steer_angle_ref;
     flg_duty_minus = 1;
   }
-  // else
-  // {
-  //   flg_duty_minus = 0;
-  // }
 
   err_steer = steer_angle_ref;
 
@@ -251,12 +222,12 @@ void loop()
   {
     steer_calcPID = 255;
   }
-  if (steer_calcPID < -255)
+  if (steer_calcPID < -255.0)
   {
     steer_calcPID = -255;
   }
 
-  // モーターの出力に変換
+  // 偏差が72度以上のときは速度指令値を0にする
   if (err_steer >= 0.0628 * 20.0)
   {
     command_speed = 0.0;
@@ -268,17 +239,18 @@ void loop()
     command_speed *= -1;
     flg_duty_minus = 0;
   }
+
   top_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 + steer_calcPID;
   bottom_motor_duty_out = 255.0 * command_speed * 0.25 * 4.0 - steer_calcPID;
 
   if (control_count % 50)
   {
     // Serial.printf("%f,%f,%f\r\n", steer_gainP, steer_gainD, steer_gainD); // ゲイン
-    //  Serial.printf("%f,%f\r\n", top_motor_duty_out, bottom_motor_duty_out); // デューティ
-    //  Serial.printf("%f\r\n", err_steer); // 偏差
-    //  Serial.printf("%f,%f\r\n", command_X, command_Y); // 指令値ベクトル
-    Serial.printf("%f,%f\r\n", command_steer*57.29577951, command_speed); // ステア指令値と速度指令値
-    //  Serial.println(steer_angle); // ステア角
+    // Serial.printf("%f,%f\r\n", top_motor_duty_out, bottom_motor_duty_out); // デューティ
+    // Serial.printf("%f\r\n", err_steer); // 偏差
+    // Serial.printf("%f,%f\r\n", command_X, command_Y); // 指令値ベクトル
+    // Serial.printf("%f,%f\r\n", command_steer*57.29577951, command_speed); // ステア指令値と速度指令値
+    // Serial.println(steer_angle); // ステア角
   }
 
   if (top_motor_duty_out > 255)
