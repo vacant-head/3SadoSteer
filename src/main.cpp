@@ -202,14 +202,14 @@ void loop()
   //  command_steer = 1.0;
   steer_angle_ref = command_steer - steer_angle;
   // ステア角の最適化
-  if (steer_angle_ref <= -1.0 * M_PI)
+  if (steer_angle_ref < -1.0 * M_PI)
   {
     steer_angle_ref = (2 * M_PI - steer_angle) + command_steer;
   }
-  if (steer_angle_ref >= M_PI)
+  if (steer_angle_ref > M_PI)
   {
     // steer_angle_ref = -steer_angle - (2 * M_PI - command_steer);
-    steer_angle_ref = -1.0 * steer_angle - (2 * M_PI - command_steer);
+    steer_angle_ref = -1.0 * steer_angle - (-2.0 * M_PI - command_steer);
   }
   // 車輪を逆転したほうがステア角が小さくなるかを判定,目標値を修正
   if (steer_angle_ref > M_PI_2)
