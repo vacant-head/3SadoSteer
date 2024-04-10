@@ -64,9 +64,12 @@ float command_steer = 0.0; // rad
 float command_speed = 0.0;
 
 // ステア角フィードバック
-float steer_angle = 0.0;     // 角度
-float steer_pre_angle = 0.0; // 前周期のステア角
-float steer_angle_ref = 0.0; // 目標値
+unsigned int angle_raw;                // エンコーダーの生の値
+unsigned int default_angle_raw = 3866; // 0度の設定
+unsigned int angle;                    // 12bitのステア角
+float steer_angle = 0.0;               // 角度
+float steer_pre_angle = 0.0;           // 前周期のステア角
+float steer_angle_ref = 0.0;           // 目標値
 float err_steer = 0.0;
 float pre_err_steer = 0.0;
 float steer_calcP = 0.0;
@@ -112,7 +115,7 @@ void setup()
   // ledcSetup(ch_led2, ledcfreq, ledcResolution);
 
   // スイッチ
-  //pinMode(sw_pin, INPUT);
+  // pinMode(sw_pin, INPUT);
 }
 
 void loop()
@@ -174,7 +177,16 @@ void loop()
   {
     byte angle_h = Wire.read();
     byte angle_l = Wire.read();
-    unsigned int angle = (0x0F & angle_h) << 8 | angle_l;
+    angle_raw = (0x0F & angle_h) << 8 | angle_l;
+    if (angle_raw >= default_angle_raw)
+    {
+      angle = (angle_raw - default_angle_raw);
+    }
+    else
+    {
+      angle = angle_raw + (4095 - default_angle_raw);
+    }
+
     steer_angle = (float)angle * 2 * M_PI / 4096.f;
   }
 
@@ -251,6 +263,8 @@ void loop()
     // Serial.printf("%f,%f\r\n", command_X, command_Y); // 指令値ベクトル
     // Serial.printf("%f,%f\r\n", command_steer*57.29577951, command_speed); // ステア指令値と速度指令値
     // Serial.println(steer_angle); // ステア角
+    //Serial.printf("%d\r\n", angle_raw);
+    //Serial.printf("%d\r\n", angle);
   }
 
   if (top_motor_duty_out > 255)
